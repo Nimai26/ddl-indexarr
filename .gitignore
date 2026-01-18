@@ -6,6 +6,7 @@
 .*
 !.gitignore
 !.dockerignore
+!.env.example
 
 # Dossiers de scripts avec credentials
 .create/
