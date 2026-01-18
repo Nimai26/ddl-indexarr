@@ -23,8 +23,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY app/ ./app/
 
 # Créer les dossiers nécessaires
-RUN mkdir -p /config /data /blackhole /output && \
-    chown -R ${PUID}:${PGID} /app /config /data /blackhole /output
+RUN mkdir -p /config /data /output && \
+    chown -R ${PUID}:${PGID} /app /config /data /output
 
 # Utiliser l'utilisateur non-root
 USER ${PUID}

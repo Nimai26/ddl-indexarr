@@ -67,7 +67,6 @@ services:
       # TMDB (optionnel, pour résolution titres)
       - TMDB_KEY=your-tmdb-api-key
       # Chemins
-      - BLACKHOLE_FOLDER=/media/downloads/blackhole
       - DOWNLOAD_FOLDER=/media/downloads/complete/ddl
     volumes:
       - ddl-indexarr-data:/data
@@ -139,7 +138,6 @@ docker run -d \
 | `JDOWNLOADER_PASSWORD` | Mot de passe MyJDownloader | **Requis** |
 | `JDOWNLOADER_DEVICE_NAME` | Nom du device JDownloader | `ddl-indexarr` |
 | `TMDB_KEY` | Clé API TMDB (optionnel) | - |
-| `BLACKHOLE_FOLDER` | Dossier blackhole | `/media/downloads/blackhole` |
 | `DOWNLOAD_FOLDER` | Dossier de téléchargement | `/media/downloads/complete/ddl` |
 | `DEBUG` | Mode debug | `false` |
 
@@ -195,7 +193,6 @@ Pour les **hardlinks** (économiser de l'espace disque) :
 │   │   │   ├── sonarr/
 │   │   │   └── lidarr/
 │   │   └── torrents/           # Torrents
-│   └── blackhole/
 ├── movies/                      # Bibliothèque films
 ├── tv/                          # Bibliothèque séries
 └── music/                       # Bibliothèque musique

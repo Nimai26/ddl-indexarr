@@ -36,7 +36,6 @@ services:
       # TMDB (pour résoudre IMDB/TMDB IDs en titres)
       - TMDB_KEY=${TMDB_KEY}
       # Chemins - IMPORTANT: utiliser /media pour permettre les hardlinks
-      - BLACKHOLE_FOLDER=/media/downloads/blackhole
       - DOWNLOAD_FOLDER=/media/downloads/complete/ddl
       - DEBUG=true
     volumes:

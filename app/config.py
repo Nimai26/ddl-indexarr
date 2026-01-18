@@ -25,7 +25,6 @@ class Settings(BaseSettings):
     jdownloader_device_name: str = Field(default="ddl-indexarr", alias="JDOWNLOADER_DEVICE_NAME")
     
     # === Chemins ===
-    blackhole_path: str = Field(default="/blackhole", alias="BLACKHOLE_FOLDER")
     output_path: str = Field(default="/output", alias="DOWNLOAD_FOLDER")
     data_path: str = Field(default="/data")
     
