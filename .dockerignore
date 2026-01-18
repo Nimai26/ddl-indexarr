@@ -1,0 +1,106 @@
+# ============================================
+# DDL-Indexarr - Docker Ignore
+# ============================================
+
+# Git et version control
+.git
+.gitignore
+.gitattributes
+
+# Documentation
+README.md
+LICENSE
+docs/
+*.md
+
+# ============================================
+# Données sensibles (ne pas inclure dans l'image)
+# ============================================
+
+# Configurations personnelles
+config/
+data/
+tmp/
+*.log
+
+# Cookies et sessions
+*cookies*.json
+*session*.json
+darkiworld_cookies.json
+
+# Credentials
+.env
+.env.local
+.env.*.local
+credentials.json
+secrets.json
+*_credentials.json
+*.pem
+*.key
+
+# ============================================
+# Données runtime (montées via volumes)
+# ============================================
+
+# Volumes Docker
+blackhole/
+downloads/
+jdownloader/
+pyload/
+.create/
+.docs/
+.test/
+.tmp/
+
+# Fichiers Docker de développement
+docker-compose.yaml
+docker-compose.yml
+docker-compose.*.yml
+Dockerfile.dev
+
+# ============================================
+# Fichiers de développement
+# ============================================
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Environnements virtuels
+venv/
+env/
+ENV/
+
+# ============================================
+# Fichiers temporaires et tests
+# ============================================
+
+# Analyses et tests
+analysis/
+test_*.json
+search_summary*.json
+api_links_*.json
+
+# Backups
+*.backup
+*.bak
+*.orig
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini

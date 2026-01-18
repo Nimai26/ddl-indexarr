@@ -1,0 +1,89 @@
+version: '3.8'
+
+services:
+  # ============================================
+  # DDL-Indexarr - Indexer + Download Client
+  # ============================================
+  ddl-indexarr:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        PUID: ${PUID:-1000}
+        PGID: ${PGID:-1000}
+    container_name: ddl-indexarr
+    restart: unless-stopped
+    networks:
+      media-network:
+        ipv4_address: ${DOCKER_IP_DDL_INDEXARR:-172.18.0.18}
+    ports:
+      - "9118:9117"   # API Torznab (indexer) - externe 9118 -> interne 9117
+      - "9120:9117"   # API SABnzbd (download client) - même port interne, autre port externe
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-Europe/Paris}
+      # API
+      - DDL_INDEXARR_API_KEY=${DDL_INDEXARR_API_KEY:-ddl-indexarr}
+      # DarkiWorld
+      - DARKIWORLD_BASE_URL=${DARKIWORLD_BASE_URL}
+      - DARKIWORLD_REMEMBER_COOKIE_NAME=${DARKIWORLD_REMEMBER_COOKIE_NAME}
+      - DARKIWORLD_REMEMBER_COOKIE_VALUE=${DARKIWORLD_REMEMBER_COOKIE_VALUE}
+      # JDownloader
+      - JDOWNLOADER_EMAIL=${JDOWNLOADER_EMAIL}
+      - JDOWNLOADER_PASSWORD=${JDOWNLOADER_PASSWORD}
+      - JDOWNLOADER_DEVICE_NAME=${JDOWNLOADER_DEVICE_NAME:-ddl-indexarr}
+      # TMDB (pour résoudre IMDB/TMDB IDs en titres)
+      - TMDB_KEY=${TMDB_KEY}
+      # Chemins - IMPORTANT: utiliser /media pour permettre les hardlinks
+      - BLACKHOLE_FOLDER=/media/downloads/blackhole
+      - DOWNLOAD_FOLDER=/media/downloads/complete/ddl
+      - DEBUG=true
+    volumes:
+      # Code source (dev)
+      - ./app:/app/app
+      # Données persistantes
+      - ddl-indexarr-data:/data
+      # Mount unifié pour hardlinks (downloads + media sur même mount)
+      - ${MEDIA_PATH:-/mnt/user/media}:/media
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
+
+  # ============================================
+  # JDownloader2 - Download Manager
+  # ============================================
+  jdownloader:
+    image: jlesage/jdownloader-2:latest
+    container_name: ddl-indexarr-jdownloader
+    restart: unless-stopped
+    networks:
+      media-network:
+        ipv4_address: ${DOCKER_IP_DDL_JDOWNLOADER:-172.18.0.19}
+    ports:
+      - "5800:5800"   # WebUI
+    environment:
+      - USER_ID=${PUID:-1000}
+      - GROUP_ID=${PGID:-1000}
+      - TZ=${TZ:-Europe/Paris}
+      - KEEP_APP_RUNNING=1
+      - MYJDOWNLOADER_EMAIL=${JDOWNLOADER_EMAIL}
+      - MYJDOWNLOADER_PASSWORD=${JDOWNLOADER_PASSWORD}
+      - MYJDOWNLOADER_DEVICE_NAME=${JDOWNLOADER_DEVICE_NAME:-ddl-indexarr}
+    volumes:
+      - ddl-indexarr-jd-config:/config
+      # Mount unifié pour hardlinks (même structure que ddl-indexarr et *arr)
+      # Output configuré dans JD: /media/downloads/complete/ddl/{SUBFOLDER}
+      - ${MEDIA_PATH:-/mnt/user/media}:/media
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
+
+volumes:
+  ddl-indexarr-data:
+    name: ddl-indexarr-data
+  ddl-indexarr-jd-config:
+    name: ddl-indexarr-jd-config
+
+networks:
+  media-network:
+    name: ${MEDIA_NETWORK:-media-network}
+    external: true

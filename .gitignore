@@ -1,0 +1,135 @@
+# ============================================
+# DDL-Indexarr - Git Ignore
+# ============================================
+
+# Dossiers cachés (commençant par .)
+.*
+!.gitignore
+!.dockerignore
+
+# Dossiers de scripts avec credentials
+.create/
+.docs/
+.test/
+.tmp/
+
+# Dossiers de test (contiennent des credentials)
+.test/
+test/
+tests/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Environnements virtuels
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.pydevproject
+.settings/
+
+# ============================================
+# Données sensibles et personnelles
+# ============================================
+
+# Configurations personnelles
+config/
+data/
+tmp/
+*.log
+
+# Cookies et sessions
+*cookies*.json
+*session*.json
+darkiworld_cookies.json
+
+# Credentials et secrets
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+credentials.json
+secrets.json
+*_credentials.json
+*.p12
+*.jks
+
+# Fichiers de mots de passe
+password.txt
+passwords.txt
+.htpasswd
+
+# ============================================
+# Données runtime Docker
+# ============================================
+
+# Volumes Docker (données persistantes)
+blackhole/
+downloads/
+jdownloader/
+pyload/
+
+# Fichiers de compilation Docker
+docker-compose.override.yml
+docker-compose.*.yml
+!docker-compose.yaml
+
+# ============================================
+# Fichiers temporaires et de test
+# ============================================
+
+# Tests et analyses
+analysis/
+test_*.json
+search_summary*.json
+api_links_*.json
+
+# Fichiers de sauvegarde
+*.backup
+*.bak
+*.orig
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*

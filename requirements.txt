@@ -1,0 +1,38 @@
+# DDL-Indexarr v2.0 - Dependencies
+
+# Web Framework
+fastapi==0.109.0
+uvicorn[standard]==0.27.0
+python-multipart==0.0.6
+
+# HTTP Client
+httpx==0.26.0
+aiohttp==3.9.1
+
+# MyJDownloader API
+myjdapi==1.1.6
+
+# XML pour Torznab
+lxml==5.1.0
+beautifulsoup4==4.12.2
+
+# Utilitaires
+python-dotenv==1.0.0
+pydantic==2.5.3
+pydantic-settings==2.1.0
+
+# Logging
+loguru==0.7.2
+bencodepy==0.9.5
+pyyaml==6.0.1
+# urllib3 downgraded pour compatibilité pyppeteer (<2.0)
+urllib3==1.26.20
+
+# Logging
+colorlog==6.8.0
+
+# File monitoring
+watchdog==3.0.0
+
+# JDownloader API
+myjdapi==1.1.6
