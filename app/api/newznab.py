@@ -334,6 +334,18 @@ def estimate_file_size(quality: str, media_type: MediaType = None, is_season_pac
     elif media_type == MediaType.MUSIC:
         # Album: généralement 300-800 MB
         size_gb = 0.5
+    elif media_type == MediaType.BOOK:
+        # Ebooks: généralement très petits
+        # EPUB/PDF: 1-10 MB
+        # CBR/CBZ (BD/Manga): 50-200 MB
+        # Audiobook: 200-500 MB
+        quality_upper = (quality or "").upper()
+        if "AUDIOBOOK" in quality_upper or "MP3" in quality_upper:
+            size_gb = 0.3  # 300 MB
+        elif "CBR" in quality_upper or "CBZ" in quality_upper or "MANGA" in quality_upper or "BD" in quality_upper:
+            size_gb = 0.1  # 100 MB
+        else:
+            size_gb = 0.005  # 5 MB (EPUB/PDF standard)
     else:
         # Film (défaut)
         size_gb = movie_size_gb
@@ -458,6 +470,188 @@ def extract_edition_from_nfo(nfo_data: list) -> Optional[str]:
     return None
 
 
+def extract_author_from_title(title: str) -> tuple[str, Optional[str]]:
+    """
+    Extrait l'auteur depuis le titre DarkiWorld.
+    
+    Formats courants:
+    - "Titre - Auteur"
+    - "Auteur - Titre" 
+    - "Titre - Auteur (2024)"
+    - "Titre [Pack X Tomes] - Auteur"
+    - "Titre : Sous-titre - Auteur"
+    
+    Returns:
+        Tuple (title_without_author, author_name)
+    """
+    if not title:
+        return title, None
+    
+    # Liste d'auteurs connus pour améliorer la détection
+    known_authors = [
+        "Stephen King", "J.K. Rowling", "J.R.R. Tolkien", "George R.R. Martin",
+        "Masashi Kishimoto", "Eiichiro Oda", "Akira Toriyama", "Hajime Isayama",
+        "Albert Uderzo", "René Goscinny", "Hergé", "Franquin",
+        "Bernard Werber", "Marc Levy", "Guillaume Musso", "Michel Bussi",
+    ]
+    
+    # Vérifier si un auteur connu est dans le titre
+    for author in known_authors:
+        if author.lower() in title.lower():
+            # Format "Auteur - Titre"
+            if title.lower().startswith(author.lower()):
+                pattern = re.compile(rf'^{re.escape(author)}\s*-\s*(.+)$', re.IGNORECASE)
+                match = pattern.match(title)
+                if match:
+                    title_part = match.group(1).strip()
+                    logger.debug(f"📝 Auteur connu extrait (format Auteur - Titre): {author}")
+                    return title_part, author
+            # Format "Titre - Auteur"
+            else:
+                pattern = re.compile(rf'^(.+?)\s*-\s*{re.escape(author)}(?:\s*\([^)]+\))?$', re.IGNORECASE)
+                match = pattern.match(title)
+                if match:
+                    title_part = match.group(1).strip()
+                    logger.debug(f"📝 Auteur connu extrait (format Titre - Auteur): {author}")
+                    return title_part, author
+    
+    # Pattern générique: "Titre - Prénom Nom" (Titre en premier)
+    # On cherche un tiret suivi d'un nom qui ressemble à un auteur (Prénom Nom ou Prénom Nom Nom)
+    author_pattern_end = r'^(.+?)\s+-\s+([A-ZÀ-Ü][a-zà-ü]+(?:\s+[A-ZÀ-Ü]\.?\s*)?[A-ZÀ-Ü][a-zà-ü]+)(?:\s*\([^)]+\))?$'
+    match = re.match(author_pattern_end, title)
+    
+    if match:
+        title_part = match.group(1).strip()
+        author = match.group(2).strip()
+        
+        # Éviter les faux positifs (ex: "Naruto - Sasuke Retsuden" n'est pas un auteur)
+        # Un auteur a généralement 2-3 mots
+        words = author.split()
+        if 2 <= len(words) <= 4:
+            logger.debug(f"📝 Auteur extrait (format Titre - Auteur): {author}")
+            return title_part, author
+    
+    # Pattern générique: "Prénom Nom - Titre" (Auteur en premier)
+    author_pattern_start = r'^([A-ZÀ-Ü][a-zà-ü]+(?:\s+[A-ZÀ-Ü]\.?\s*)?[A-ZÀ-Ü][a-zà-ü]+)\s+-\s+(.+?)(?:\s*\([^)]+\))?$'
+    match = re.match(author_pattern_start, title)
+    
+    if match:
+        author = match.group(1).strip()
+        title_part = match.group(2).strip()
+        
+        words = author.split()
+        if 2 <= len(words) <= 4:
+            logger.debug(f"📝 Auteur extrait (format Auteur - Titre): {author}")
+            return title_part, author
+    
+    return title, None
+
+
+def normalize_ebook_format(raw_quality: str) -> str:
+    """
+    Normalise le format d'ebook de DarkiWorld vers un format standard.
+    
+    Args:
+        raw_quality: Format brut (CBR, CBZ, epub, PDF, ARCHIVE, etc.)
+    
+    Returns:
+        Format normalisé en majuscules
+    """
+    if not raw_quality:
+        return "EBOOK"
+    
+    quality_upper = raw_quality.upper().strip()
+    
+    # Mapping des formats ebook
+    ebook_formats = {
+        'EPUB': 'EPUB',
+        'PDF': 'PDF',
+        'MOBI': 'MOBI',
+        'AZW': 'AZW',
+        'AZW3': 'AZW3',
+        'CBR': 'CBR',
+        'CBZ': 'CBZ',
+        'CB7': 'CB7',
+        'ARCHIVE': 'ARCHIVE',
+        'ZIP': 'ARCHIVE',
+        'RAR': 'ARCHIVE',
+        'MP3': 'AUDIOBOOK',
+        'M4B': 'AUDIOBOOK',
+        'FLAC': 'AUDIOBOOK',
+    }
+    
+    # Recherche exacte
+    if quality_upper in ebook_formats:
+        return ebook_formats[quality_upper]
+    
+    # Recherche partielle
+    for key, value in ebook_formats.items():
+        if key in quality_upper:
+            return value
+    
+    # Fallback: retourner le format tel quel ou EBOOK
+    return quality_upper if quality_upper else "EBOOK"
+
+
+def build_ebook_release_title(link: dict, nfo_data: list = None) -> tuple[str, str, Optional[str]]:
+    """
+    Construit un titre de release pour les ebooks/BD/Manga.
+    
+    Format: "Titre T01 (Année) FORMAT [Hébergeur]" ou avec auteur: "Titre T01 (Année) FORMAT [Hébergeur] [by Auteur]"
+    
+    Returns:
+        Tuple (display_title, clean_title, author)
+    """
+    title = link.get("title", "Unknown")
+    year = link.get("year")
+    raw_format = link.get("quality", "")
+    host = link.get("host", "DDL")
+    episode = link.get("episode")  # Numéro de tome pour les ebooks
+    
+    # Extraire l'auteur du titre
+    title_without_author, author = extract_author_from_title(title)
+    
+    # Normaliser le format
+    ebook_format = normalize_ebook_format(raw_format)
+    
+    # Construire le titre
+    parts = [title_without_author]
+    
+    # Numéro de tome (si disponible et > 0)
+    # Ne pas ajouter si le titre contient déjà un indicateur de tome/volume
+    if episode and episode > 0:
+        title_lower = title_without_author.lower()
+        # Vérifier si le titre contient déjà un indicateur de tome
+        has_tome_indicator = any(x in title_lower for x in [
+            ' t1', ' t2', ' t3', ' t4', ' t5', ' t6', ' t7', ' t8', ' t9',
+            'tome ', 'vol.', 'volume ', 'intégrale', 'pack ', '[pack'
+        ])
+        if not has_tome_indicator:
+            parts.append(f"T{episode:02d}")
+    
+    # Année
+    if year:
+        parts.append(f"({year})")
+    
+    # Format du fichier
+    parts.append(ebook_format)
+    
+    # Hébergeur (pour distinguer les différents liens)
+    parts.append(f"[{host}]")
+    
+    clean_title = " ".join(parts)
+    display_title = clean_title  # Même chose car hébergeur déjà inclus
+    
+    # Ajouter l'auteur au titre si disponible (pour affichage enrichi)
+    if author:
+        # Format: "Titre T01 (Année) FORMAT [Host] [by Author]"
+        clean_title_with_author = f"{clean_title} [by {author}]"
+    else:
+        clean_title_with_author = clean_title
+    
+    return (display_title, clean_title_with_author, author)
+
+
 def build_release_title(link: dict, nfo_data: list = None, media_type: MediaType = None) -> tuple[str, str]:
     """
     Construit un titre de release optimisé pour Radarr/Sonarr
@@ -469,11 +663,21 @@ def build_release_title(link: dict, nfo_data: list = None, media_type: MediaType
     - Inclut SxxExx si épisode spécifique
     - Inclut Sxx pour pack de saison
     
+    Pour les ebooks (media_type=BOOK):
+    - Utilise le format réel (EPUB, PDF, CBZ, etc.)
+    - Extrait l'auteur si disponible
+    
     Returns:
         Tuple (display_title, clean_title)
         - display_title: Pour affichage (avec hébergeur)
         - clean_title: Pour Radarr/Sonarr/JDownloader (sans hébergeur)
     """
+    # === TRAITEMENT SPÉCIFIQUE POUR LES EBOOKS ===
+    if media_type == MediaType.BOOK:
+        display_title, clean_title, author = build_ebook_release_title(link, nfo_data)
+        return (display_title, clean_title)
+    
+    # === TRAITEMENT FILMS/SÉRIES ===
     # Données DarkiWorld (source principale)
     title = link.get("title", "Unknown")
     year = link.get("year")
@@ -574,9 +778,19 @@ MUSIC_CATEGORIES = [
     ("3040", "Audio/Lossless"),
 ]
 
+BOOK_CATEGORIES = [
+    ("7000", "Books"),
+    ("7010", "Books/Mags"),
+    ("7020", "Books/Ebook"),
+    ("7030", "Books/Comics"),
+    ("7040", "Books/Technical"),
+    ("7050", "Books/Foreign"),
+    ("7060", "Books/Audiobook"),
+]
+
 
 def get_category_for_quality(quality: str, media_type: MediaType) -> str:
-    """Détermine la catégorie Newznab selon la qualité normalisée"""
+    """Détermine la catégorie Newznab selon la qualité normalisée et le type"""
     q = quality.lower() if quality else ""
     
     if media_type == MediaType.MOVIE:
@@ -603,6 +817,16 @@ def get_category_for_quality(quality: str, media_type: MediaType) -> str:
         if any(x in q for x in ["flac", "lossless"]):
             return "3040"
         return "3010"
+    
+    elif media_type == MediaType.BOOK:
+        # Catégoriser selon le type d'ebook
+        if any(x in q for x in ["audiobook", "audio"]):
+            return "7060"  # Audiobook
+        if any(x in q for x in ["comic", "bd", "comics"]):
+            return "7030"  # Comics/BD
+        if any(x in q for x in ["manga"]):
+            return "7030"  # Comics (inclut mangas)
+        return "7020"  # Ebook (default)
     
     return "2000"
 
@@ -631,11 +855,17 @@ def create_caps_xml() -> str:
     categories_xml += '    <category id="3000" name="Audio">\n'
     for cat_id, cat_name in MUSIC_CATEGORIES[1:]:
         categories_xml += f'      <subcat id="{cat_id}" name="{cat_name}"/>\n'
+    categories_xml += '    </category>\n'
+    
+    # Books
+    categories_xml += '    <category id="7000" name="Books">\n'
+    for cat_id, cat_name in BOOK_CATEGORIES[1:]:
+        categories_xml += f'      <subcat id="{cat_id}" name="{cat_name}"/>\n'
     categories_xml += '    </category>'
     
     return f"""<?xml version="1.0" encoding="UTF-8"?>
 <caps>
-  <server title="DDL-Indexarr" strapline="DDL Indexer for *arr apps"/>
+  <server title="DDL-Indexarr" strapline="DDL Indexer for *arr apps (Films, Séries, Musique, Ebooks)"/>
   <limits default="100" max="500"/>
   <retention days="9999"/>
   <registration available="no" open="no"/>
@@ -644,6 +874,7 @@ def create_caps_xml() -> str:
     <movie-search available="yes" supportedParams="q,imdbid,tmdbid"/>
     <tv-search available="yes" supportedParams="q,tvdbid,season,ep"/>
     <music-search available="yes" supportedParams="q,artist,album"/>
+    <book-search available="yes" supportedParams="q,author,title"/>
   </searching>
   <categories>
     {categories_xml}
@@ -702,6 +933,12 @@ def create_test_items(search_type: str) -> list[dict]:
     elif search_type in ("music", "audio"):
         return [
             {"title": "Test Album (2024) FLAC", "guid": "test-music-1", "size": 524288000, "category": "3040", "pubdate": now},
+        ]
+    elif search_type in ("book",):
+        return [
+            {"title": "Test Book Author (2024) EPUB", "guid": "test-book-1", "size": 5242880, "category": "7020", "pubdate": now},
+            {"title": "Test Comic T01 (2024) CBR", "guid": "test-book-2", "size": 52428800, "category": "7030", "pubdate": now},
+            {"title": "Test Audiobook Narrator (2024) MP3", "guid": "test-book-3", "size": 314572800, "category": "7060", "pubdate": now},
         ]
     return [
         {"title": "Test Result (2024)", "guid": "test-1", "size": 8589934592, "category": "2040", "pubdate": now},

@@ -198,10 +198,22 @@ class DarkiWorldClient:
                 if media_type:
                     if media_type == MediaType.MOVIE and item_type != "movie":
                         continue
-                    elif media_type == MediaType.TV and item_type not in ["series", "tv"]:
+                    elif media_type == MediaType.TV and item_type not in ["series", "tv", "animes"]:
                         continue
                     elif media_type == MediaType.MUSIC and item_type != "music":
                         continue
+                    elif media_type == MediaType.BOOK and item_type != "ebook":
+                        continue
+                
+                # Déterminer le type normalisé
+                if item_type == "movie":
+                    normalized_type = "movie"
+                elif item_type in ["series", "tv", "animes"]:
+                    normalized_type = "series"
+                elif item_type == "ebook":
+                    normalized_type = "ebook"
+                else:
+                    normalized_type = item_type
                 
                 # Construire le résultat
                 result = {
@@ -209,7 +221,7 @@ class DarkiWorldClient:
                     "title": item.get("name", ""),
                     "original_title": item.get("original_title"),
                     "year": item.get("year"),
-                    "type": "movie" if item_type == "movie" else ("series" if item_type in ["series", "tv"] else item_type),
+                    "type": normalized_type,
                     "category": item.get("category"),
                     "tmdb_id": item.get("tmdb_id"),
                     "imdb_id": item.get("imdb_id"),

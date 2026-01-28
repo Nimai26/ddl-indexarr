@@ -1,19 +1,21 @@
-# DDL-Indexarr 🎬
+# DDL-Indexarr 🎬📚
 
 [![Docker Hub](https://img.shields.io/badge/Docker%20Hub-nimai24%2Fddl--indexarr-blue?logo=docker)](https://hub.docker.com/r/nimai24/ddl-indexarr)
 [![GitHub](https://img.shields.io/badge/GitHub-Nimai26%2Fddl--indexarr-black?logo=github)](https://github.com/Nimai26/ddl-indexarr)
 
-**DDL-Indexarr** est un indexer Newznab/Torznab compatible avec les applications \*arr (Radarr, Sonarr, Lidarr) qui permet de rechercher et télécharger du contenu depuis **DarkiWorld** via **JDownloader**.
+**DDL-Indexarr** est un indexer Newznab/Torznab compatible avec les applications \*arr (Radarr, Sonarr, Lidarr, Readarr) qui permet de rechercher et télécharger du contenu depuis **DarkiWorld** via **JDownloader**.
 
 ## ✨ Fonctionnalités
 
-- 🔍 **Indexer Newznab** compatible Radarr, Sonarr et Lidarr
+- 🔍 **Indexer Newznab** compatible Radarr, Sonarr, Lidarr et Readarr
+- 📚 **Support complet des ebooks** : EPUB, PDF, CBR/CBZ (BD/Manga), Audiobooks
 - 📥 **Client de téléchargement SABnzbd** émulé (même endpoint, ports différents)
 - 🌐 **Intégration DarkiWorld** avec authentification par cookie
 - ⬇️ **JDownloader** via MyJDownloader API pour les téléchargements DDL
 - 🎯 **Vérification des liens** avant de les retourner (liens morts filtrés)
 - 🎬 **Support TMDB/IMDB** pour la résolution des titres
 - 🔗 **Hardlinks compatibles** avec structure /media unifiée
+- ✍️ **Extraction automatique des auteurs** depuis les titres DarkiWorld
 
 ## 🏗️ Architecture
 
@@ -22,16 +24,19 @@
 │   Radarr    │────▶│                 │────▶│  DarkiWorld │
 │   Sonarr    │     │   DDL-Indexarr  │     └─────────────┘
 │   Lidarr    │◀────│                 │────▶┌─────────────┐
-└─────────────┘     └─────────────────┘     │  JDownloader│
-       │                    │               └─────────────┘
+│   Readarr   │     │                 │     │  JDownloader│
+└─────────────┘     └─────────────────┘     └─────────────┘
+       │                    │                      │
        │                    │                      │
        ▼                    ▼                      ▼
 ┌──────────────────────────────────────────────────────┐
 │                /media (mount unifié)                 │
-│  ├── downloads/complete/ddl/{radarr,sonarr,lidarr}  │
+│  ├── downloads/complete/ddl/{radarr,sonarr,lidarr,  │
+│  │                            readarr}              │
 │  ├── movies/                                         │
 │  ├── tv/                                             │
-│  └── music/                                          │
+│  ├── music/                                          │
+│  └── books/                                          │
 └──────────────────────────────────────────────────────┘
 ```
 
@@ -161,6 +166,7 @@ docker run -d \
      - Radarr: `2000, 2010, 2020, 2030, 2040, 2045, 2050`
      - Sonarr: `5000, 5010, 5020, 5030, 5040, 5045, 5050`
      - Lidarr: `3000, 3010, 3020, 3030, 3040`
+     - Readarr: `7000, 7020, 7030, 7060` (Ebooks, BD/Comics, Audiobooks)
 
 ### Radarr / Sonarr / Lidarr - Download Client
 
@@ -170,7 +176,7 @@ docker run -d \
    - **Host**: `ddl-indexarr` (ou IP)
    - **Port**: `9117` (interne) ou `9120` (externe)
    - **API Key**: Votre `DDL_INDEXARR_API_KEY`
-   - **Category**: `radarr`, `sonarr` ou `lidarr`
+   - **Category**: `radarr`, `sonarr`, `lidarr` ou `readarr`
 
 ### Remote Path Mapping (si nécessaire)
 
@@ -191,11 +197,13 @@ Pour les **hardlinks** (économiser de l'espace disque) :
 │   │   ├── ddl/                # DDL-Indexarr downloads
 │   │   │   ├── radarr/
 │   │   │   ├── sonarr/
-│   │   │   └── lidarr/
+│   │   │   ├── lidarr/
+│   │   │   └── readarr/
 │   │   └── torrents/           # Torrents
 ├── movies/                      # Bibliothèque films
 ├── tv/                          # Bibliothèque séries
-└── music/                       # Bibliothèque musique
+├── music/                       # Bibliothèque musique
+└── books/                       # Bibliothèque ebooks/BD/manga
 ```
 
 > ⚠️ **Important**: Pour que les hardlinks fonctionnent, tous les conteneurs (*arr, DDL-Indexarr, JDownloader) doivent avoir le **même mount** `/media`.
@@ -211,6 +219,7 @@ Pour les **hardlinks** (économiser de l'espace disque) :
 | `GET /api?t=movie&imdbid=...` | Recherche film par IMDB |
 | `GET /api?t=tvsearch&q=...&season=X&ep=Y` | Recherche série |
 | `GET /api?t=music&q=...` | Recherche musique |
+| `GET /api?t=book&q=...&author=...` | Recherche ebook/BD/manga |
 | `GET /nzb?id=...` | Télécharger un "NZB" (déclenche JDownloader) |
 
 ### SABnzbd API (Port 9117/9120)
@@ -253,6 +262,10 @@ Pour les **hardlinks** (économiser de l'espace disque) :
 | Musique | 3000-3099 | Audio |
 | Musique MP3 | 3010 | Audio MP3 |
 | Musique FLAC | 3040 | Audio Lossless |
+| **Livres** | **7000-7099** | **Books** |
+| **Ebooks** | **7020** | **EPUB/PDF/MOBI** |
+| **BD/Comics/Manga** | **7030** | **CBR/CBZ** |
+| **Audiobooks** | **7060** | **MP3/M4B/FLAC** |
 
 ## 🤝 Contribution
 

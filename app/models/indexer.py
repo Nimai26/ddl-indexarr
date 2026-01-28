@@ -10,6 +10,7 @@ class ArrType(str, Enum):
     RADARR = "radarr"
     SONARR = "sonarr"
     LIDARR = "lidarr"
+    BOOKARR = "bookarr"  # Ebooks, BD, Mangas
 
 
 class MediaType(str, Enum):
@@ -17,6 +18,7 @@ class MediaType(str, Enum):
     MOVIE = "movie"
     TV = "tv"
     MUSIC = "music"
+    BOOK = "book"  # Ebooks, comics, manga, BD
 
 
 class IndexerConfig(BaseModel):
@@ -86,6 +88,19 @@ INDEXER_CONFIGS: dict[str, IndexerConfig] = {
         supported_params="q,artist,album",
         output_subfolder="lidarr",
     ),
+    
+    # === BOOKARR - Ebooks, BD, Mangas, Audiobooks ===
+    "bookarr": IndexerConfig(
+        id="bookarr",
+        name="DDL-Indexarr (Ebooks)",
+        arr_type=ArrType.BOOKARR,
+        media_type=MediaType.BOOK,
+        torznab_categories=[7000, 7010, 7020, 7030, 7040, 7050, 7060],  # Newznab Book categories
+        darkiworld_categories=["bd", "livres", "mangas", "audiobook"],  # Cats DarkiWorld: 106, 108, 110, 212
+        search_type="book",
+        supported_params="q,author,title",
+        output_subfolder="bookarr",
+    ),
 }
 
 
@@ -99,7 +114,7 @@ def get_indexer_by_search_type(search_type: str, categories: list[int] = None) -
     Trouve l'indexer correspondant au type de recherche Torznab.
     
     Args:
-        search_type: Type de recherche (movie, tvsearch, music, search)
+        search_type: Type de recherche (movie, tvsearch, music, book, search)
         categories: Liste des catégories Torznab demandées (pour détecter le type quand t=search)
     """
     # Mapping direct par type de recherche
@@ -108,6 +123,7 @@ def get_indexer_by_search_type(search_type: str, categories: list[int] = None) -
         "tvsearch": "sonarr", 
         "music": "lidarr",
         "audio": "lidarr",
+        "book": "bookarr",
     }
     
     # Si type explicite, l'utiliser
@@ -117,6 +133,11 @@ def get_indexer_by_search_type(search_type: str, categories: list[int] = None) -
     
     # Pour "search" générique, détecter le type via les catégories
     if search_type == "search" and categories:
+        # Catégories ebooks: 7000-7999
+        book_cats = [c for c in categories if 7000 <= c < 8000]
+        if book_cats:
+            return INDEXER_CONFIGS.get("bookarr")
+        
         # Catégories musique: 3000-3999
         music_cats = [c for c in categories if 3000 <= c < 4000]
         if music_cats:
